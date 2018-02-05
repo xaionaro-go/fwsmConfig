@@ -28,7 +28,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			if err != nil { return }
 			for scanner.Scan() {
 				subLine := scanner.Text()
-				if subLine == "!" {
+				if strings.Trim(subLine, " \t\r\n") == "!" {
 					break
 				}
 				subWords := strings.Split(subLine, " ")[1:]
@@ -45,14 +45,28 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 					default:
 						warning("Cannot parse line: %v", subLine)
 					}
+				case "shutdown":
+					vlan.Flags &= 0^net.FlagUp
+				case "no":
+				default:
+					warning("Cannot parse line: %v", subLine)
 				}
 				if err != nil { return }
 			}
 
 			cfg.VLANs = append(cfg.VLANs, vlan)
+		case "dns":
+			switch words[1] {
+			case "name-server":
+				cfg.DHCP.NSs = append(cfg.DHCP.NSs, parseNS(words[2]))
+			default:
+				warning("Cannot parse line: %v", line)
+			}
+		default:
+			warning("Cannot parse line: %v", line)
 		}
 
-		fmt.Println(words)
+		//fmt.Println(words)
 	}
 	err = scanner.Err()
 	return

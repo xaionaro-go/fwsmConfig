@@ -6,5 +6,6 @@ import (
 
 func warning(format string, args ...interface{}) {
 	fmt.Printf(format, args...)
+	fmt.Println("")
 }
 

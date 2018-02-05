@@ -31,6 +31,10 @@ func parseIPNet(ipStr string, maskStr string) (ipnet net.IPNet, err error) {
 	return
 }
 
+func parseNS(nsStr string) net.NS {
+	return net.NS{Host: nsStr}
+}
+
 type Protocol int
 
 // awk 'BEGIN{prevId=-1} {if($1 == "#" || $1 == "" || $2 <= prevId){next} gsub("[-.]", "", $1) ;printf "%s", "PROTO_"toupper($1)" = Protocol("$2") // "; $1=""; prevId=$2; $2=""; print $0}' < /etc/protocols
