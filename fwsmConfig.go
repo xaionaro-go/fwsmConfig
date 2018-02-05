@@ -1,6 +1,7 @@
 package fwsmConfig
 
 import (
+	"encoding/json"
 	"io"
 	"sort"
 )
@@ -14,12 +15,16 @@ type FwsmConfig struct {
 	Routes Routes
 }
 
-func (cfg FwsmConfig) WriteTo(writer io.Writer) error {
+func (cfg *FwsmConfig) prepareToWrite() {
 	sort.Sort(cfg.VLANs)
 	sort.Sort(cfg.ACLs)
 	sort.Sort(cfg.SNATs)
 	sort.Sort(cfg.DNATs)
 	sort.Sort(cfg.Routes)
+}
+
+func (cfg FwsmConfig) WriteTo(writer io.Writer) error {
+	cfg.prepareToWrite()
 
 	err := cfg.DHCP.WriteTo(writer)
 	if err != nil {
@@ -59,3 +64,11 @@ func (cfg FwsmConfig) WriteTo(writer io.Writer) error {
 
 	return nil
 }
+
+func (cfg FwsmConfig) WriteJsonTo(writer io.Writer) (err error) {
+	cfg.prepareToWrite()
+	jsonEncoder := json.NewEncoder(writer)
+	jsonEncoder.SetIndent("", "  ")
+	return jsonEncoder.Encode(cfg)
+}
+

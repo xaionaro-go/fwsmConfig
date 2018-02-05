@@ -13,6 +13,7 @@ type IPPort struct {
 type IPs []net.IP
 type IPNets []net.IPNet
 type IPPorts []IPPort
+type NSs []net.NS
 
 func (ipport IPPort) String() string {
 	if ipport.Port == nil {
@@ -20,6 +21,14 @@ func (ipport IPPort) String() string {
 	}
 
 	return ipport.IP.String()+":"+strconv.Itoa(int(*ipport.Port))
+}
+
+func parseIPNet(ipStr string, maskStr string) (ipnet net.IPNet, err error) {
+	ip := net.ParseIP(ipStr)
+	ipnet.Mask = net.IPMask(net.ParseIP(maskStr))
+	ipnet.IP = ip.Mask(ipnet.Mask)
+
+	return
 }
 
 type Protocol int

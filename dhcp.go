@@ -6,7 +6,7 @@ import (
 )
 
 type DHCPCommon struct {
-	NSs []IPs
+	NSs NSs
 }
 
 type DHCP struct {
