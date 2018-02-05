@@ -13,6 +13,9 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 	vlanIndexMap := map[int]*VLAN{}
 	vlanNameMap := map[string]*VLAN{}
 	aclMap := map[string]*ACL{}
+	snatMap := map[string]*SNAT{}
+
+	globalNatMap := map[int]net.IP{}
 
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
@@ -98,6 +101,40 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			}
 
 			vlanNameMap[ifaceName].MTU = mtu
+
+		case "global":
+			var globalNatId int
+			globalNatId, err = strconv.Atoi(words[2])
+			if err != nil {
+				return
+			}
+			globalNatMap[globalNatId] = net.ParseIP(words[3])
+
+		case "nat":
+			var globalNatId int
+			globalNatId, err = strconv.Atoi(words[2])
+			if err != nil {
+				return
+			}
+			natTo := globalNatMap[globalNatId]
+			snat := snatMap[natTo.String()]
+			isToAppend := false
+			if snat == nil {
+				isToAppend = true
+				snat = &SNAT{}
+			}
+
+			var source net.IPNet
+			source, err = parseIPNet(words[3], words[4])
+			if err != nil {
+				return
+			}
+			snat.Sources = append(snat.Sources, source)
+			snat.NATTo = natTo
+
+			if isToAppend {
+				snatMap[natTo.String()] = cfg.SNATs.Append(*snat)
+			}
 
 		default:
 			warning("Cannot parse line: %v", line)

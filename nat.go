@@ -3,6 +3,7 @@ package fwsmConfig
 import (
 	"io"
 	"net"
+	"sync"
 )
 
 type SNAT struct {
@@ -17,6 +18,26 @@ type DNAT struct {
 
 type SNATs []SNAT
 type DNATs []DNAT
+
+var snatAppendMutex = sync.Mutex{}
+func (a *SNATs) Append(snat SNAT) *SNAT {
+	snatAppendMutex.Lock()
+	defer snatAppendMutex.Unlock()
+
+	*a = append(*a, snat)
+
+	return &(*a)[len(*a)-1]
+}
+
+var dnatAppendMutex = sync.Mutex{}
+func (a *DNATs) Append(dnat DNAT) *DNAT {
+	dnatAppendMutex.Lock()
+	defer dnatAppendMutex.Unlock()
+
+	*a = append(*a, dnat)
+
+	return &(*a)[len(*a)-1]
+}
 
 func (a SNATs) Len() int           { return len(a) }
 func (a SNATs) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
