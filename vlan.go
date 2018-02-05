@@ -3,6 +3,7 @@ package fwsmConfig
 import (
 	"io"
 	"net"
+	"sync"
 )
 
 type VLAN struct {
@@ -20,4 +21,15 @@ func (a VLANs) Less(i, j int) bool { return a[i].Index < a[j].Index }
 
 func (vlan VLAN) WriteTo(writer io.Writer) error {
 	return nil
+}
+
+var vlanAppendMutex = sync.Mutex{}
+
+func (a *VLANs) Append(vlan VLAN) *VLAN {
+	vlanAppendMutex.Lock()
+	defer vlanAppendMutex.Unlock()
+
+	*a = append(*a, vlan)
+
+	return &(*a)[len(*a)-1]
 }

@@ -10,17 +10,23 @@ type IPPort struct {
 	Port *uint16
 }
 
+type PortRange struct {
+	Start uint16
+	End   uint16
+}
+
 type IPs []net.IP
 type IPNets []net.IPNet
 type IPPorts []IPPort
 type NSs []net.NS
+type PortRanges []PortRange
 
 func (ipport IPPort) String() string {
 	if ipport.Port == nil {
 		return ipport.IP.String()
 	}
 
-	return ipport.IP.String()+":"+strconv.Itoa(int(*ipport.Port))
+	return ipport.IP.String() + ":" + strconv.Itoa(int(*ipport.Port))
 }
 
 func parseIPNet(ipStr string, maskStr string) (ipnet net.IPNet, err error) {
@@ -36,6 +42,181 @@ func parseNS(nsStr string) net.NS {
 }
 
 type Protocol int
+
+func parseProtocol(protocolStr string) Protocol {
+	// awk 'BEGIN{prevId=-1} {if($1 == "#" || $1 == "" || $2 <= prevId){next} gsub("[-.]", "", $1) ;print "case \""$1"\": return PROTO_"toupper($1); prevId=$2}' < /etc/protocols
+	switch protocolStr {
+	case "ip":
+		return PROTO_IP
+	case "icmp":
+		return PROTO_ICMP
+	case "igmp":
+		return PROTO_IGMP
+	case "ggp":
+		return PROTO_GGP
+	case "ipencap":
+		return PROTO_IPENCAP
+	case "st":
+		return PROTO_ST
+	case "tcp":
+		return PROTO_TCP
+	case "egp":
+		return PROTO_EGP
+	case "igp":
+		return PROTO_IGP
+	case "pup":
+		return PROTO_PUP
+	case "udp":
+		return PROTO_UDP
+	case "hmp":
+		return PROTO_HMP
+	case "xnsidp":
+		return PROTO_XNSIDP
+	case "rdp":
+		return PROTO_RDP
+	case "isotp4":
+		return PROTO_ISOTP4
+	case "dccp":
+		return PROTO_DCCP
+	case "xtp":
+		return PROTO_XTP
+	case "ddp":
+		return PROTO_DDP
+	case "idprcmtp":
+		return PROTO_IDPRCMTP
+	case "ipv6":
+		return PROTO_IPV6
+	case "ipv6route":
+		return PROTO_IPV6ROUTE
+	case "ipv6frag":
+		return PROTO_IPV6FRAG
+	case "idrp":
+		return PROTO_IDRP
+	case "rsvp":
+		return PROTO_RSVP
+	case "gre":
+		return PROTO_GRE
+	case "esp":
+		return PROTO_ESP
+	case "ah":
+		return PROTO_AH
+	case "skip":
+		return PROTO_SKIP
+	case "ipv6icmp":
+		return PROTO_IPV6ICMP
+	case "ipv6nonxt":
+		return PROTO_IPV6NONXT
+	case "ipv6opts":
+		return PROTO_IPV6OPTS
+	case "rspf":
+		return PROTO_RSPF
+	case "vmtp":
+		return PROTO_VMTP
+	case "eigrp":
+		return PROTO_EIGRP
+	case "ospf":
+		return PROTO_OSPF
+	case "ax25":
+		return PROTO_AX25
+	case "ipip":
+		return PROTO_IPIP
+	case "etherip":
+		return PROTO_ETHERIP
+	case "encap":
+		return PROTO_ENCAP
+	case "pim":
+		return PROTO_PIM
+	case "ipcomp":
+		return PROTO_IPCOMP
+	case "vrrp":
+		return PROTO_VRRP
+	case "l2tp":
+		return PROTO_L2TP
+	case "isis":
+		return PROTO_ISIS
+	case "sctp":
+		return PROTO_SCTP
+	case "fc":
+		return PROTO_FC
+	case "mobilityheader":
+		return PROTO_MOBILITYHEADER
+	case "udplite":
+		return PROTO_UDPLITE
+	case "mplsinip":
+		return PROTO_MPLSINIP
+	case "manet":
+		return PROTO_MANET
+	case "hip":
+		return PROTO_HIP
+	case "shim6":
+		return PROTO_SHIM6
+	case "wesp":
+		return PROTO_WESP
+	case "rohc":
+		return PROTO_ROHC
+	}
+
+	panic("Unknown protocol: <"+protocolStr+">");
+	return PROTO_IP
+}
+
+func parseNetworkAndPortRanges(words []string) (ipnet net.IPNet, portranges PortRanges, unusedWords []string) {
+	unusedWords = words
+
+	switch unusedWords[0] { // TODO: add support of IPv6
+	case "any":
+		ipnet.IP = net.ParseIP("0.0.0.0")
+		ipnet.Mask = net.IPMask(net.ParseIP("0.0.0.0"))
+		unusedWords = unusedWords[1:]
+	case "host":
+		ipnet.IP = net.ParseIP(unusedWords[1])
+		ipnet.Mask = net.IPMask(net.ParseIP("255.255.255.255"))
+		unusedWords = unusedWords[2:]
+	default:
+		ipnet.IP = net.ParseIP(unusedWords[0])
+		ipnet.Mask = net.IPMask(net.ParseIP(unusedWords[1]))
+		unusedWords = unusedWords[2:]
+	}
+
+	if len(unusedWords) == 0 {
+		portranges = append(portranges, PortRange{Start: 0, End: 65535})
+		return
+	}
+
+	switch unusedWords[0] {
+	case "eq", "gt", "lt", "neg", "range":
+		operator := unusedWords[0]
+		port, err := strconv.Atoi(unusedWords[1])
+		if err != nil {
+			panic(err)
+		}
+		unusedWords = unusedWords[2:]
+
+		switch operator {
+		case "eq":
+			portranges = append(portranges, PortRange{Start: uint16(port), End: uint16(port)})
+		case "gt":
+			portranges = append(portranges, PortRange{Start: uint16(port) + 1, End: 65535})
+		case "lt":
+			portranges = append(portranges, PortRange{Start: 0, End: uint16(port) - 1})
+		case "neg":
+			portranges = append(portranges, PortRange{Start: 0, End: uint16(port) - 1})
+			portranges = append(portranges, PortRange{Start: uint16(port) + 1, End: 65535})
+		case "range":
+			portEnd, err := strconv.Atoi(unusedWords[0])
+			if err != nil {
+				panic(err)
+			}
+			portranges = append(portranges, PortRange{Start: uint16(port), End: uint16(portEnd)})
+			unusedWords = unusedWords[1:]
+		}
+	}
+
+	if len(portranges) == 0 {
+		portranges = append(portranges, PortRange{Start: 0, End: 65535})
+	}
+	return
+}
 
 // awk 'BEGIN{prevId=-1} {if($1 == "#" || $1 == "" || $2 <= prevId){next} gsub("[-.]", "", $1) ;printf "%s", "PROTO_"toupper($1)" = Protocol("$2") // "; $1=""; prevId=$2; $2=""; print $0}' < /etc/protocols
 

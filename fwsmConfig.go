@@ -71,4 +71,3 @@ func (cfg FwsmConfig) WriteJsonTo(writer io.Writer) (err error) {
 	jsonEncoder.SetIndent("", "  ")
 	return jsonEncoder.Encode(cfg)
 }
-

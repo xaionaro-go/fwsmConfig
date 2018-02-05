@@ -1,8 +1,8 @@
 package fwsmConfig
 
 import (
-	"net"
 	"io"
+	"net"
 )
 
 type Route struct {
