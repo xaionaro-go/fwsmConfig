@@ -10,7 +10,8 @@ import (
 )
 
 func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
-	vlanMap := map[int]*VLAN{}
+	vlanIndexMap := map[int]*VLAN{}
+	vlanNameMap := map[string]*VLAN{}
 	aclMap := map[string]*ACL{}
 
 	scanner := bufio.NewScanner(reader)
@@ -63,7 +64,10 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				}
 			}
 
-			vlanMap[vlan.Index] = cfg.VLANs.Append(vlan)
+			vlanPtr := cfg.VLANs.Append(vlan)
+			vlanIndexMap[vlan.Index] = vlanPtr
+			vlanNameMap[vlan.Name] = vlanPtr
+
 		case "dns":
 			switch words[1] {
 			case "name-server":
@@ -85,6 +89,16 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			if isToAppend {
 				aclMap[acl.Name] = cfg.ACLs.Append(*acl)
 			}
+		case "mtu":
+			ifaceName := words[1]
+			var mtu int
+			mtu, err = strconv.Atoi(words[2])
+			if err != nil {
+				return
+			}
+
+			vlanNameMap[ifaceName].MTU = mtu
+
 		default:
 			warning("Cannot parse line: %v", line)
 		}
