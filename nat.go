@@ -20,6 +20,7 @@ type SNATs []SNAT
 type DNATs []DNAT
 
 var snatAppendMutex = sync.Mutex{}
+
 func (a *SNATs) Append(snat SNAT) *SNAT {
 	snatAppendMutex.Lock()
 	defer snatAppendMutex.Unlock()
@@ -30,6 +31,7 @@ func (a *SNATs) Append(snat SNAT) *SNAT {
 }
 
 var dnatAppendMutex = sync.Mutex{}
+
 func (a *DNATs) Append(dnat DNAT) *DNAT {
 	dnatAppendMutex.Lock()
 	defer dnatAppendMutex.Unlock()

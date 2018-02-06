@@ -117,6 +117,9 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				return
 			}
 			natTo := globalNatMap[globalNatId]
+			if natTo.String() == "" || natTo.String() == "<nil>" {
+				continue
+			}
 			snat := snatMap[natTo.String()]
 			isToAppend := false
 			if snat == nil {
@@ -135,6 +138,28 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			if isToAppend {
 				snatMap[natTo.String()] = cfg.SNATs.Append(*snat)
 			}
+
+		case "static":
+			unusedWords := words[2:]
+
+			dnat := DNAT{}
+			protocol := PROTO_IP
+			if strings.Index(unusedWords[0], ".") == -1 {
+				protocol = parseProtocol(unusedWords[0])
+				unusedWords = unusedWords[1:]
+			}
+			dstHost, dstPort, unusedWords := parseHostPort(unusedWords)
+			natToHost, natToPort, unusedWords := parseHostPort(unusedWords)
+			if unusedWords[0] != "netmask" {
+				panic("This shouldn't happened")
+			}
+			if unusedWords[1] != "255.255.255.255" {
+				panic("This case is not implemented, yet")
+			}
+			dnat.Destinations = append(dnat.Destinations, IPPort{Protocol: &protocol, IP: dstHost, Port: dstPort})
+			dnat.NATTo = IPPort{IP: natToHost, Port: natToPort}
+
+			cfg.DNATs = append(cfg.DNATs, dnat)
 
 		default:
 			warning("Cannot parse line: %v", line)
