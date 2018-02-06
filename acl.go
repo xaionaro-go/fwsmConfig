@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"sync"
 )
 
 type ACLAction int
@@ -38,7 +37,7 @@ type ACL struct {
 	VLANNames []string
 }
 
-type ACLs []ACL
+type ACLs []*ACL
 
 func (a ACLs) Len() int           { return len(a) }
 func (a ACLs) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
@@ -46,17 +45,6 @@ func (a ACLs) Less(i, j int) bool { return a[i].Name < a[j].Name }
 
 func (acl ACL) WriteTo(writer io.Writer) error {
 	return nil
-}
-
-var aclAppendMutex = sync.Mutex{}
-
-func (a *ACLs) Append(acl ACL) *ACL {
-	aclAppendMutex.Lock()
-	defer aclAppendMutex.Unlock()
-
-	*a = append(*a, acl)
-
-	return &(*a)[len(*a)-1]
 }
 
 func (acl *ACL) ParseAppendRule(words []string) error {

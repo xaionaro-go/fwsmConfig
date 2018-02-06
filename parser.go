@@ -67,9 +67,9 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				}
 			}
 
-			vlanPtr := cfg.VLANs.Append(vlan)
-			vlanIndexMap[vlan.Index] = vlanPtr
-			vlanNameMap[vlan.Name] = vlanPtr
+			cfg.VLANs = append(cfg.VLANs, &vlan)
+			vlanIndexMap[vlan.Index] = &vlan
+			vlanNameMap[vlan.Name] = &vlan
 
 		case "dns":
 			switch words[1] {
@@ -90,7 +90,8 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			err = acl.ParseAppendRule(words[2:])
 
 			if isToAppend {
-				aclMap[acl.Name] = cfg.ACLs.Append(*acl)
+				cfg.ACLs = append(cfg.ACLs, acl)
+				aclMap[acl.Name] = acl
 			}
 		case "mtu":
 			ifaceName := words[1]
@@ -136,7 +137,8 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			snat.NATTo = natTo
 
 			if isToAppend {
-				snatMap[natTo.String()] = cfg.SNATs.Append(*snat)
+				cfg.SNATs = append(cfg.SNATs, snat)
+				snatMap[natTo.String()] = snat
 			}
 
 		case "static":
@@ -159,7 +161,19 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			dnat.Destinations = append(dnat.Destinations, IPPort{Protocol: &protocol, IP: dstHost, Port: dstPort})
 			dnat.NATTo = IPPort{IP: natToHost, Port: natToPort}
 
-			cfg.DNATs = append(cfg.DNATs, dnat)
+			cfg.DNATs = append(cfg.DNATs, &dnat)
+
+		case "access-group":
+			if words[2] != "in" || words[3] != "interface" {
+				panic("This case is not implemented")
+			}
+
+			aclName := words[1]
+			ifName := words[4]
+
+			acl := aclMap[aclName]
+
+			acl.VLANNames = append(acl.VLANNames, ifName)
 
 		default:
 			warning("Cannot parse line: %v", line)
