@@ -175,6 +175,26 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 
 			acl.VLANNames = append(acl.VLANNames, ifName)
 
+		case "route":
+			dstNet, err := parseIPNet(words[2], words[3])
+			if err != nil {
+				panic(err)
+			}
+			gw := net.ParseIP(words[4])
+			metric, err := strconv.Atoi(words[5])
+			if err != nil {
+				panic(err)
+			}
+
+			cfg.Routes = append(cfg.Routes, 
+				&Route{
+					Sources: IPNets{net.IPNet{IP: net.ParseIP("0.0.0.0"), Mask: net.IPv4Mask(0, 0, 0, 0)}}, 
+					Destination: dstNet,
+					Gateway: gw,
+					Metric: metric,
+				},
+			)
+
 		default:
 			warning("Cannot parse line: %v", line)
 		}

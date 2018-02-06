@@ -9,9 +9,10 @@ type Route struct {
 	Sources     IPNets
 	Destination net.IPNet
 	Gateway     net.IP
+	Metric      int
 }
 
-type Routes []Route
+type Routes []*Route
 
 func (a Routes) Len() int           { return len(a) }
 func (a Routes) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
