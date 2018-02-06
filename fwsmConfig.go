@@ -12,6 +12,7 @@ type FwsmConfig struct {
 	ACLs   ACLs
 	SNATs  SNATs
 	DNATs  DNATs
+	DHCPs  DHCPs
 	Routes Routes
 }
 
@@ -57,6 +58,12 @@ func (cfg FwsmConfig) WriteTo(writer io.Writer) error {
 	}
 	for _, route := range cfg.Routes {
 		err := route.WriteTo(writer)
+		if err != nil {
+			return err
+		}
+	}
+	for _, dhcp := range cfg.DHCPs {
+		err := dhcp.WriteTo(writer)
 		if err != nil {
 			return err
 		}

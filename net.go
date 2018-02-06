@@ -22,6 +22,7 @@ type IPNets []net.IPNet
 type IPPorts []IPPort
 type NSs []net.NS
 type PortRanges []PortRange
+type Domain string
 
 func (ipport IPPort) String() string {
 	if ipport.Port == nil {

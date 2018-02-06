@@ -71,13 +71,13 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			vlanIndexMap[vlan.Index] = &vlan
 			vlanNameMap[vlan.Name] = &vlan
 
-		case "dns":
+		/*case "dns":
 			switch words[1] {
 			case "name-server":
 				cfg.DHCP.NSs = append(cfg.DHCP.NSs, parseNS(words[2]))
 			default:
 				warning("Cannot parse line: %v", line)
-			}
+			}*/
 		case "access-list":
 			aclName := words[1]
 			acl := aclMap[aclName]
@@ -186,14 +186,49 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				panic(err)
 			}
 
-			cfg.Routes = append(cfg.Routes, 
+			cfg.Routes = append(cfg.Routes,
 				&Route{
-					Sources: IPNets{net.IPNet{IP: net.ParseIP("0.0.0.0"), Mask: net.IPv4Mask(0, 0, 0, 0)}}, 
+					Sources: IPNets{net.IPNet{IP: net.ParseIP("0.0.0.0"), Mask: net.IPv4Mask(0, 0, 0, 0)}},
 					Destination: dstNet,
 					Gateway: gw,
 					Metric: metric,
 				},
 			)
+
+		case "dhcpd":
+			switch words[1] {
+			case "address":
+				dhcp := DHCP{}
+				err := dhcp.ParseRange(words[2])
+				if err != nil {
+					panic(err)
+				}
+				cfg.DHCPs = append(cfg.DHCPs, dhcp)
+
+			case "dns":
+				for _, ns := range words[2:] {
+					cfg.DHCP.NSs = append(cfg.DHCP.NSs, parseNS(ns))
+				}
+
+			case "domain":
+				cfg.DHCP.Domain = Domain(words[2])
+
+			case "option":
+				dhcpOptionId, err := strconv.Atoi(words[2])
+				if err != nil {
+					panic(err)
+				}
+				dhcpOptionValueType := parseDHCPOptionValueType(words[3])
+				cfg.DHCP.Options = append(cfg.DHCP.Options, DHCPOption{
+					Id: dhcpOptionId,
+					ValueType: dhcpOptionValueType,
+					Value: []byte(words[4]),
+				})
+
+			case "enable", "lease", "ping_timeout": // is ignored, ATM
+			default:
+				panic(fmt.Errorf("Unknown DHCP command: %v", words))
+			}
 
 		default:
 			warning("Cannot parse line: %v", line)
