@@ -1,13 +1,15 @@
 package fwsmConfig
 
 import (
+	"bytes"
 	"io"
 	"net"
 )
 
 type SNAT struct {
-	Sources IPNets
-	NATTo   net.IP
+	Sources      IPNets
+	NATTo        net.IP
+	FWSMGlobalId int
 }
 
 type DNAT struct {
@@ -37,6 +39,22 @@ func (snat SNAT) WriteTo(writer io.Writer) error {
 	return nil
 }
 
+func (snats SNATs) CiscoString() string {
+	var buf bytes.Buffer
+	for _, snat := range snats {
+		snat.WriteTo(&buf)
+	}
+	return buf.String()
+}
+
 func (dnat DNAT) WriteTo(writer io.Writer) error {
 	return nil
+}
+
+func (dnats DNATs) CiscoString() string {
+	var buf bytes.Buffer
+	for _, dnat := range dnats {
+		dnat.WriteTo(&buf)
+	}
+	return buf.String()
 }

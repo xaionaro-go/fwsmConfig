@@ -50,7 +50,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 					switch subWords[1] {
 					case "address":
 						vlan.IPs = append(vlan.IPs, net.ParseIP(subWords[2]))
-						var ipnet net.IPNet
+						var ipnet IPNet
 						ipnet, err = parseIPNet(subWords[2], subWords[3])
 						vlan.AttachedNetworks = append(vlan.AttachedNetworks, ipnet)
 					default:
@@ -72,12 +72,12 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			vlanNameMap[vlan.Name] = &vlan
 
 		/*case "dns":
-			switch words[1] {
-			case "name-server":
-				cfg.DHCP.NSs = append(cfg.DHCP.NSs, parseNS(words[2]))
-			default:
-				warning("Cannot parse line: %v", line)
-			}*/
+		switch words[1] {
+		case "name-server":
+			cfg.DHCP.NSs = append(cfg.DHCP.NSs, parseNS(words[2]))
+		default:
+			warning("Cannot parse line: %v", line)
+		}*/
 		case "access-list":
 			aclName := words[1]
 			acl := aclMap[aclName]
@@ -128,13 +128,14 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				snat = &SNAT{}
 			}
 
-			var source net.IPNet
+			var source IPNet
 			source, err = parseIPNet(words[3], words[4])
 			if err != nil {
 				return
 			}
 			snat.Sources = append(snat.Sources, source)
 			snat.NATTo = natTo
+			snat.FWSMGlobalId = globalNatId
 
 			if isToAppend {
 				cfg.SNATs = append(cfg.SNATs, snat)
@@ -188,10 +189,10 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 
 			cfg.Routes = append(cfg.Routes,
 				&Route{
-					Sources: IPNets{net.IPNet{IP: net.ParseIP("0.0.0.0"), Mask: net.IPv4Mask(0, 0, 0, 0)}},
+					Sources:     IPNets{IPNet{IP: net.ParseIP("0.0.0.0"), Mask: net.IPv4Mask(0, 0, 0, 0)}},
 					Destination: dstNet,
-					Gateway: gw,
-					Metric: metric,
+					Gateway:     gw,
+					Metric:      metric,
 				},
 			)
 
@@ -220,9 +221,9 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				}
 				dhcpOptionValueType := parseDHCPOptionValueType(words[3])
 				cfg.DHCP.Options = append(cfg.DHCP.Options, DHCPOption{
-					Id: dhcpOptionId,
+					Id:        dhcpOptionId,
 					ValueType: dhcpOptionValueType,
-					Value: []byte(words[4]),
+					Value:     []byte(words[4]),
 				})
 
 			case "enable", "lease", "ping_timeout": // is ignored, ATM

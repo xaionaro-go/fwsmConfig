@@ -1,6 +1,7 @@
 package fwsmConfig
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -38,3 +39,15 @@ func (vlan VLAN) WriteTo(writer io.Writer) error {
 	return nil
 }
 
+func (vlan VLAN) CiscoString() string {
+	var buf bytes.Buffer
+	vlan.WriteTo(&buf)
+	return buf.String()
+}
+func (vlans VLANs) CiscoString() string {
+	var buf bytes.Buffer
+	for _, vlan := range vlans {
+		vlan.WriteTo(&buf)
+	}
+	return buf.String()
+}

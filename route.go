@@ -1,13 +1,14 @@
 package fwsmConfig
 
 import (
+	"bytes"
 	"io"
 	"net"
 )
 
 type Route struct {
 	Sources     IPNets
-	Destination net.IPNet
+	Destination IPNet
 	Gateway     net.IP
 	Metric      int
 }
@@ -25,3 +26,12 @@ func (route Route) GetPos() string {
 func (route Route) WriteTo(writer io.Writer) error {
 	return nil
 }
+
+func (routes Routes) CiscoString() string {
+	var buf bytes.Buffer
+	for _, route := range routes {
+		route.WriteTo(&buf)
+	}
+	return buf.String()
+}
+

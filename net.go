@@ -1,6 +1,7 @@
 package fwsmConfig
 
 import (
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -18,11 +19,25 @@ type PortRange struct {
 }
 
 type IPs []net.IP
-type IPNets []net.IPNet
+type IPNet net.IPNet
+type IPNets []IPNet
 type IPPorts []IPPort
 type NSs []net.NS
 type PortRanges []PortRange
 type Domain string
+
+func (ipnet IPNet) Contains(ip net.IP) bool {
+	return (*net.IPNet)(&ipnet).Contains(ip)
+}
+
+func (nss NSs) CiscoString() string {
+	nssStr := []string{}
+	for _, ns := range nss {
+		nssStr = append(nssStr, ns.Host)
+	}
+
+	return strings.Join(nssStr, " ")
+}
 
 func (ipport IPPort) String() string {
 	if ipport.Port == nil {
@@ -32,7 +47,7 @@ func (ipport IPPort) String() string {
 	return ipport.IP.String() + ":" + strconv.Itoa(int(*ipport.Port))
 }
 
-func parseIPNet(ipStr string, maskStr string) (ipnet net.IPNet, err error) {
+func parseIPNet(ipStr string, maskStr string) (ipnet IPNet, err error) {
 	ip := net.ParseIP(ipStr)
 	ipnet.Mask = net.IPMask(net.ParseIP(maskStr))
 	ipnet.IP = ip.Mask(ipnet.Mask)
@@ -1018,7 +1033,165 @@ func parseProtocol(protocolStr string) Protocol {
 	return PROTO_IP
 }
 
-func parseNetworkAndPortRanges(words []string) (ipnet net.IPNet, portranges PortRanges, unusedWords []string) {
+func (protocol Protocol) CiscoString() string {
+	switch protocol {
+	// awk 'BEGIN{prevId=-1} {if($1 == "#" || $1 == "" || $2 <= prevId){next} gsub("[-.]", "", $1) ;print "case PROTO_"toupper($1)": return \""$1"\""; prevId=$2}' < /etc/protocols
+	case PROTO_IP:
+		return "ip"
+	case PROTO_ICMP:
+		return "icmp"
+	case PROTO_IGMP:
+		return "igmp"
+	case PROTO_GGP:
+		return "ggp"
+	case PROTO_IPENCAP:
+		return "ipencap"
+	case PROTO_ST:
+		return "st"
+	case PROTO_TCP:
+		return "tcp"
+	case PROTO_EGP:
+		return "egp"
+	case PROTO_IGP:
+		return "igp"
+	case PROTO_PUP:
+		return "pup"
+	case PROTO_UDP:
+		return "udp"
+	case PROTO_HMP:
+		return "hmp"
+	case PROTO_XNSIDP:
+		return "xnsidp"
+	case PROTO_RDP:
+		return "rdp"
+	case PROTO_ISOTP4:
+		return "isotp4"
+	case PROTO_DCCP:
+		return "dccp"
+	case PROTO_XTP:
+		return "xtp"
+	case PROTO_DDP:
+		return "ddp"
+	case PROTO_IDPRCMTP:
+		return "idprcmtp"
+	case PROTO_IPV6:
+		return "ipv6"
+	case PROTO_IPV6ROUTE:
+		return "ipv6route"
+	case PROTO_IPV6FRAG:
+		return "ipv6frag"
+	case PROTO_IDRP:
+		return "idrp"
+	case PROTO_RSVP:
+		return "rsvp"
+	case PROTO_GRE:
+		return "gre"
+	case PROTO_ESP:
+		return "esp"
+	case PROTO_AH:
+		return "ah"
+	case PROTO_SKIP:
+		return "skip"
+	case PROTO_IPV6ICMP:
+		return "ipv6icmp"
+	case PROTO_IPV6NONXT:
+		return "ipv6nonxt"
+	case PROTO_IPV6OPTS:
+		return "ipv6opts"
+	case PROTO_RSPF:
+		return "rspf"
+	case PROTO_VMTP:
+		return "vmtp"
+	case PROTO_EIGRP:
+		return "eigrp"
+	case PROTO_OSPF:
+		return "ospf"
+	case PROTO_AX25:
+		return "ax25"
+	case PROTO_IPIP:
+		return "ipip"
+	case PROTO_ETHERIP:
+		return "etherip"
+	case PROTO_ENCAP:
+		return "encap"
+	case PROTO_PIM:
+		return "pim"
+	case PROTO_IPCOMP:
+		return "ipcomp"
+	case PROTO_VRRP:
+		return "vrrp"
+	case PROTO_L2TP:
+		return "l2tp"
+	case PROTO_ISIS:
+		return "isis"
+	case PROTO_SCTP:
+		return "sctp"
+	case PROTO_FC:
+		return "fc"
+	case PROTO_MOBILITYHEADER:
+		return "mobilityheader"
+	case PROTO_UDPLITE:
+		return "udplite"
+	case PROTO_MPLSINIP:
+		return "mplsinip"
+	case PROTO_MANET:
+		return "manet"
+	case PROTO_HIP:
+		return "hip"
+	case PROTO_SHIM6:
+		return "shim6"
+	case PROTO_WESP:
+		return "wesp"
+	case PROTO_ROHC:
+		return "rohc"
+	}
+	panic("This shouldn't happened")
+	return "unknown"
+}
+
+func (ipnet IPNet) CiscoString() string {
+	maskString := net.IP(ipnet.Mask).String()
+	switch maskString {
+	case "255.255.255.255":
+		return "host "+ipnet.IP.String()
+	case "0.0.0.0":
+		return "any"
+	}
+
+	return ipnet.IP.String()+" "+maskString
+
+}
+
+func (portRanges PortRanges) CiscoString() string {
+	if len(portRanges) == 2 {
+		if portRanges[0].Start != 0 || portRanges[1].End != 65535 || portRanges[0].End + 2 != portRanges[1].Start {
+			panic("This case is not implemented, yet")
+		}
+		return fmt.Sprintf("neg %v", portRanges[0].End+1)
+	}
+
+	portRange := portRanges[0]
+
+	if portRange.Start == 0 && portRange.End == 65535 {
+		return ""
+	}
+
+	if portRange.Start == portRange.End {
+		return fmt.Sprintf("eq %v", portRange.Start)
+	}
+
+	if portRange.Start == 0 {
+		return fmt.Sprintf("lt %v", portRange.End+1)
+	}
+
+	if portRange.End == 65535 {
+		return fmt.Sprintf("gt %v", portRange.Start-1)
+	}
+
+	return fmt.Sprintf("range %v %v", portRange.Start, portRange.End)
+}
+
+func parseNetworkAndPortRanges(words []string) (ipnet IPNet, portranges PortRanges, unusedWords []string) {
 	unusedWords = words
 
 	switch unusedWords[0] { // TODO: add support of IPv6
