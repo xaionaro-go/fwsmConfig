@@ -133,11 +133,11 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			if err != nil {
 				return
 			}
-			snat.Sources = append(snat.Sources, source)
+			snat.Sources = append(snat.Sources, SNATSource{IPNet: source, IfName: strings.Trim(words[1], "()")})
 			snat.NATTo = natTo
-			snat.FWSMGlobalId = globalNatId
 
 			if isToAppend {
+				snat.FWSMGlobalId = globalNatId
 				cfg.SNATs = append(cfg.SNATs, snat)
 				snatMap[natTo.String()] = snat
 			}

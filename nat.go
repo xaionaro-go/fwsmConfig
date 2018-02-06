@@ -2,13 +2,29 @@ package fwsmConfig
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net"
 )
 
+const (
+	EXTERNAL_NET = "outside"
+)
+
+type SNATSource struct {
+	IPNet
+
+// for FWSM config only:
+	IfName string
+}
+
+type SNATSources []SNATSource
+
 type SNAT struct {
-	Sources      IPNets
+	Sources      SNATSources
 	NATTo        net.IP
+
+// for FWSM config only:
 	FWSMGlobalId int
 }
 
@@ -22,20 +38,25 @@ type DNATs []*DNAT
 
 func (a SNATs) Len() int           { return len(a) }
 func (a SNATs) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a SNATs) Less(i, j int) bool { return a[i].GetPos() < a[j].GetPos() }
+func (a SNATs) Less(i, j int) bool { return a[i].FWSMGlobalId < a[j].FWSMGlobalId }
+
 func (a DNATs) Len() int           { return len(a) }
 func (a DNATs) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a DNATs) Less(i, j int) bool { return a[i].GetPos() < a[j].GetPos() }
 
-func (snat SNAT) GetPos() string {
+/*func (snat SNAT) GetPos() string {
 	return snat.NATTo.String()
-}
+}*/
 
 func (dnat DNAT) GetPos() string {
 	return dnat.NATTo.String()
 }
 
 func (snat SNAT) WriteTo(writer io.Writer) error {
+	fmt.Fprintf(writer, "global ("+EXTERNAL_NET+") %v %v\n", snat.FWSMGlobalId, snat.NATTo.String())
+	for _, source := range snat.Sources {
+		fmt.Fprintf(writer, "nat (%v) %v %v %v\n", source.IfName, snat.FWSMGlobalId, source.IP.String(), net.IP(source.Mask).String())
+	}
 	return nil
 }
 
