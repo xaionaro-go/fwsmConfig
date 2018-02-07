@@ -73,7 +73,17 @@ func (snats SNATs) CiscoString() string {
 
 func (dnat DNAT) WriteTo(writer io.Writer) error {
 	for _, dst := range dnat.Destinations {
-		fmt.Fprintf(writer, "static (%v,"+EXTERNAL_NET+") %v %v netmask 255.255.255.255\n", dnat.IfName, dst.CiscoString(), dnat.NATTo.CiscoString())
+		protocolPrefix := ""
+		if dnat.NATTo.Protocol != nil {
+			protocolPrefix = dnat.NATTo.Protocol.CiscoString()
+			if protocolPrefix == "ip" {
+				protocolPrefix = ""
+			}
+			if protocolPrefix != "" {
+				protocolPrefix += " "
+			}
+		}
+		fmt.Fprintf(writer, "static (%v,"+EXTERNAL_NET+") %v %v netmask 255.255.255.255\n", dnat.IfName, protocolPrefix+dst.CiscoString(), dnat.NATTo.CiscoString())
 	}
 	return nil
 }

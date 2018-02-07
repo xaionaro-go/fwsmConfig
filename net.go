@@ -45,12 +45,12 @@ func (ipport IPPort) CiscoString() string {
 	}
 
 	protocolPrefix := ""
-	if ipport.Protocol != nil {
+	/*if ipport.Protocol != nil {
 		protocolPrefix = (*ipport.Protocol).CiscoString() + " "
 		if protocolPrefix == "ip " {
 			protocolPrefix = ""
 		}
-	}
+	}*/
 
 	portSuffix := ""
 	if ipport.Port != nil {

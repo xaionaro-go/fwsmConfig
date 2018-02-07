@@ -154,10 +154,10 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			dstHost, dstPort, unusedWords := parseHostPort(unusedWords)
 			natToHost, natToPort, unusedWords := parseHostPort(unusedWords)
 			if unusedWords[0] != "netmask" {
-				panic("This shouldn't happened")
+				panic(fmt.Errorf("This shouldn't happened: %v", words))
 			}
 			if unusedWords[1] != "255.255.255.255" {
-				panic("This case is not implemented, yet")
+				panic(fmt.Errorf("This case is not implemented, yet: %v", words))
 			}
 			dnat.Destinations = append(dnat.Destinations, IPPort{Protocol: &protocol, IP: dstHost, Port: dstPort})
 			dnat.NATTo = IPPort{Protocol: &protocol, IP: natToHost, Port: natToPort}
