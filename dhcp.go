@@ -32,6 +32,9 @@ type DHCP struct {
 
 	RangeStart net.IP
 	RangeEnd   net.IP
+
+// for FWSM config only:
+	IfName string
 }
 
 type DHCPs []DHCP
@@ -52,10 +55,17 @@ type DHCPOption struct {
 type DHCPOptions []DHCPOption
 
 func (dhcp DHCPCommon) WriteTo(writer io.Writer) error {
+	fmt.Fprintf(writer, "%v", dhcp.CiscoString())
 	return nil
 }
 
 func (dhcp DHCP) WriteTo(writer io.Writer) error {
+	if len(dhcp.NSs) != 0 || len(dhcp.Options) != 0 || dhcp.Domain != "" {
+		panic(fmt.Errorf("This case is not implemented, yet: %v", dhcp))
+	}
+
+	fmt.Fprintf(writer, "dhcpd address %v-%v %v\n", dhcp.RangeStart.String(), dhcp.RangeEnd.String(), dhcp.IfName)
+
 	return nil
 }
 func (dhcp *DHCP) ParseRange(ipRangeString string) error {

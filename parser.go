@@ -205,6 +205,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				if err != nil {
 					panic(err)
 				}
+				dhcp.IfName = words[3]
 				cfg.DHCPs = append(cfg.DHCPs, dhcp)
 
 			case "dns":
