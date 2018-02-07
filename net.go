@@ -39,12 +39,41 @@ func (nss NSs) CiscoString() string {
 	return strings.Join(nssStr, " ")
 }
 
-func (ipport IPPort) String() string {
-	if ipport.Port == nil {
-		return ipport.IP.String()
+func (ipport IPPort) CiscoString() string {
+	if ipport.Port != nil && ipport.Protocol == nil {
+		panic(fmt.Errorf("This shouldn't happened: %v", ipport))
 	}
 
-	return ipport.IP.String() + ":" + strconv.Itoa(int(*ipport.Port))
+	protocolPrefix := ""
+	if ipport.Protocol != nil {
+		protocolPrefix = (*ipport.Protocol).CiscoString() + " "
+		if protocolPrefix == "ip " {
+			protocolPrefix = ""
+		}
+	}
+
+	portSuffix := ""
+	if ipport.Port != nil {
+		portSuffix = " "+strconv.Itoa(int(*ipport.Port))
+	}
+
+	return protocolPrefix+ipport.IP.String()+portSuffix
+}
+
+func (ipport IPPort) String() string {
+	protocolSuffix := ""
+	if ipport.Protocol != nil {
+		protocolSuffix = "/"+(*ipport.Protocol).CiscoString()
+		if protocolSuffix == "/ip" {
+			protocolSuffix = ""
+		}
+	}
+
+	if ipport.Port == nil {
+		return ipport.IP.String()+protocolSuffix
+	}
+
+	return ipport.IP.String() + ":" + strconv.Itoa(int(*ipport.Port)) + protocolSuffix
 }
 
 func parseIPNet(ipStr string, maskStr string) (ipnet IPNet, err error) {

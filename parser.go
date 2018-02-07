@@ -160,7 +160,8 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				panic("This case is not implemented, yet")
 			}
 			dnat.Destinations = append(dnat.Destinations, IPPort{Protocol: &protocol, IP: dstHost, Port: dstPort})
-			dnat.NATTo = IPPort{IP: natToHost, Port: natToPort}
+			dnat.NATTo = IPPort{Protocol: &protocol, IP: natToHost, Port: natToPort}
+			dnat.IfName = strings.Split(strings.Trim(words[1], "()"), ",")[0]
 
 			cfg.DNATs = append(cfg.DNATs, &dnat)
 

@@ -31,6 +31,9 @@ type SNAT struct {
 type DNAT struct {
 	Destinations IPPorts
 	NATTo        IPPort
+
+// for FWSM config only:
+	IfName string
 }
 
 type SNATs []*SNAT
@@ -69,6 +72,9 @@ func (snats SNATs) CiscoString() string {
 }
 
 func (dnat DNAT) WriteTo(writer io.Writer) error {
+	for _, dst := range dnat.Destinations {
+		fmt.Fprintf(writer, "static (%v,"+EXTERNAL_NET+") %v %v netmask 255.255.255.255\n", dnat.IfName, dst.CiscoString(), dnat.NATTo.CiscoString())
+	}
 	return nil
 }
 
