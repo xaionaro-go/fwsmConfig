@@ -90,6 +90,9 @@ func (acl ACL) WriteTo(writer io.Writer) error {
 	for _, rule := range acl.Rules {
 		fmt.Fprintf(writer, "access-list %v extended %v\n", acl.Name, rule.CiscoString())
 	}
+	for _, ifName := range acl.VLANNames {
+		fmt.Fprintf(writer, "access-group %v in interface %v\n", acl.Name, ifName)
+	}
 	return nil
 }
 
