@@ -194,6 +194,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 					Destination: dstNet,
 					Gateway:     gw,
 					Metric:      metric,
+					IfName:      words[1],
 				},
 			)
 
