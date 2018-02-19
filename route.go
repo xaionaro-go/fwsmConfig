@@ -13,7 +13,7 @@ type Route struct {
 	Gateway     net.IP
 	Metric      int
 
-// for FWSM config only:
+	// for FWSM config only:
 	IfName string
 }
 
@@ -48,4 +48,3 @@ func (routes Routes) CiscoString() string {
 	}
 	return buf.String()
 }
-

@@ -3,6 +3,7 @@ package fwsmConfig
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/xaionaro-go/networkControl"
 	"io"
 	"sort"
 )
@@ -48,4 +49,16 @@ func (cfg FwsmConfig) WriteJsonTo(writer io.Writer) (err error) {
 	jsonEncoder := json.NewEncoder(writer)
 	jsonEncoder.SetIndent("", "  ")
 	return jsonEncoder.Encode(cfg)
+}
+
+func (cfg FwsmConfig) Apply(netHost networkControl.HostI) error {
+	return errNotImplemented
+}
+
+func (cfg FwsmConfig) Save(netHost networkControl.HostI, cfgPath string) error {
+	return errNotImplemented
+}
+
+func (cfg FwsmConfig) Revert(netHost networkControl.HostI) error {
+	return errNotImplemented
 }

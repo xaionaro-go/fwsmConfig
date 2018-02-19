@@ -14,17 +14,17 @@ const (
 type SNATSource struct {
 	IPNet
 
-// for FWSM config only:
+	// for FWSM config only:
 	IfName string
 }
 
 type SNATSources []SNATSource
 
 type SNAT struct {
-	Sources      SNATSources
-	NATTo        net.IP
+	Sources SNATSources
+	NATTo   net.IP
 
-// for FWSM config only:
+	// for FWSM config only:
 	FWSMGlobalId int
 }
 
@@ -32,7 +32,7 @@ type DNAT struct {
 	Destinations IPPorts
 	NATTo        IPPort
 
-// for FWSM config only:
+	// for FWSM config only:
 	IfName string
 }
 

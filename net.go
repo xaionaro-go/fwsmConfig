@@ -54,32 +54,38 @@ func (ipport IPPort) CiscoString() string {
 
 	portSuffix := ""
 	if ipport.Port != nil {
-		portSuffix = " "+strconv.Itoa(int(*ipport.Port))
+		portSuffix = " " + strconv.Itoa(int(*ipport.Port))
 	}
 
-	return protocolPrefix+ipport.IP.String()+portSuffix
+	return protocolPrefix + ipport.IP.String() + portSuffix
 }
 
 func (ipport IPPort) String() string {
 	protocolSuffix := ""
 	if ipport.Protocol != nil {
-		protocolSuffix = "/"+(*ipport.Protocol).CiscoString()
+		protocolSuffix = "/" + (*ipport.Protocol).CiscoString()
 		if protocolSuffix == "/ip" {
 			protocolSuffix = ""
 		}
 	}
 
 	if ipport.Port == nil {
-		return ipport.IP.String()+protocolSuffix
+		return ipport.IP.String() + protocolSuffix
 	}
 
 	return ipport.IP.String() + ":" + strconv.Itoa(int(*ipport.Port)) + protocolSuffix
 }
 
-func parseIPNet(ipStr string, maskStr string) (ipnet IPNet, err error) {
-	ip := net.ParseIP(ipStr)
+func parseIPNetUnmasked(ipStr string, maskStr string) (ipnet IPNet, err error) {
+	ipnet.IP = net.ParseIP(ipStr)
 	ipnet.Mask = net.IPMask(net.ParseIP(maskStr))
-	ipnet.IP = ip.Mask(ipnet.Mask)
+
+	return
+}
+
+func parseIPNet(ipStr string, maskStr string) (ipnet IPNet, err error) {
+	ipnet, err = parseIPNetUnmasked(ipStr, maskStr)
+	ipnet.IP = ipnet.IP.Mask(ipnet.Mask)
 
 	return
 }
@@ -1182,18 +1188,18 @@ func (ipnet IPNet) CiscoString() string {
 	maskString := net.IP(ipnet.Mask).String()
 	switch maskString {
 	case "255.255.255.255":
-		return "host "+ipnet.IP.String()
+		return "host " + ipnet.IP.String()
 	case "0.0.0.0":
 		return "any"
 	}
 
-	return ipnet.IP.String()+" "+maskString
+	return ipnet.IP.String() + " " + maskString
 
 }
 
 func (portRanges PortRanges) CiscoString() string {
 	if len(portRanges) == 2 {
-		if portRanges[0].Start != 0 || portRanges[1].End != 65535 || portRanges[0].End + 2 != portRanges[1].Start {
+		if portRanges[0].Start != 0 || portRanges[1].End != 65535 || portRanges[0].End+2 != portRanges[1].Start {
 			panic("This case is not implemented, yet")
 		}
 		return fmt.Sprintf("neg %v", portRanges[0].End+1)

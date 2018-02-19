@@ -33,7 +33,7 @@ type DHCP struct {
 	RangeStart net.IP
 	RangeEnd   net.IP
 
-// for FWSM config only:
+	// for FWSM config only:
 	IfName string
 }
 
@@ -92,4 +92,3 @@ func (dhcps DHCPs) CiscoString() string {
 	}
 	return buf.String()
 }
-

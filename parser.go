@@ -49,10 +49,13 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				case "ip":
 					switch subWords[1] {
 					case "address":
-						vlan.IPs = append(vlan.IPs, net.ParseIP(subWords[2]))
+						/*vlan.IPs = append(vlan.IPs, net.ParseIP(subWords[2]))
 						var ipnet IPNet
 						ipnet, err = parseIPNet(subWords[2], subWords[3])
-						vlan.AttachedNetworks = append(vlan.AttachedNetworks, ipnet)
+						vlan.AttachedNetworks = append(vlan.AttachedNetworks, ipnet)*/
+						var ipnet IPNet
+						ipnet, err = parseIPNetUnmasked(subWords[2], subWords[3])
+						vlan.IPs = append(vlan.IPs, ipnet)
 					default:
 						warning("Cannot parse line: %v", subLine)
 					}
