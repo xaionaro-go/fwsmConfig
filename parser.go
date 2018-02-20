@@ -3,6 +3,7 @@ package fwsmConfig
 import (
 	"bufio"
 	"fmt"
+	"github.com/xaionaro-go/networkControl"
 	"io"
 	"net"
 	"strconv"
@@ -10,7 +11,7 @@ import (
 )
 
 func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
-	vlanIndexMap := map[int]*VLAN{}
+	vlanVlanIdMap := map[int]*VLAN{}
 	vlanNameMap := map[string]*VLAN{}
 	aclMap := map[string]*ACL{}
 	snatMap := map[string]*SNAT{}
@@ -31,7 +32,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				panic(fmt.Errorf("invalid interface name: %v; should be vlanX[X[X[X]]]", words[1]))
 			}
 			vlan := VLAN{Interface: net.Interface{MTU: 1500, Flags: net.FlagUp | net.FlagMulticast}}
-			vlan.Index, err = strconv.Atoi(words[1][4:]) // "Vlan10" -> vlan.Index: 10
+			vlan.VlanId, err = strconv.Atoi(words[1][4:]) // "Vlan10" -> vlan.VlanId: 10
 			if err != nil {
 				return
 			}
@@ -53,7 +54,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 						var ipnet IPNet
 						ipnet, err = parseIPNet(subWords[2], subWords[3])
 						vlan.AttachedNetworks = append(vlan.AttachedNetworks, ipnet)*/
-						var ipnet IPNet
+						var ipnet networkControl.IPNet
 						ipnet, err = parseIPNetUnmasked(subWords[2], subWords[3])
 						vlan.IPs = append(vlan.IPs, ipnet)
 					default:
@@ -71,7 +72,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			}
 
 			cfg.VLANs = append(cfg.VLANs, &vlan)
-			vlanIndexMap[vlan.Index] = &vlan
+			vlanVlanIdMap[vlan.VlanId] = &vlan
 			vlanNameMap[vlan.Name] = &vlan
 
 		/*case "dns":
@@ -93,7 +94,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			err = acl.ParseAppendRule(words[2:])
 
 			if isToAppend {
-				cfg.ACLs = append(cfg.ACLs, acl)
+				cfg.ACLs = append(cfg.ACLs, (*networkControl.ACL)(acl))
 				aclMap[acl.Name] = acl
 			}
 		case "mtu":
@@ -131,17 +132,17 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				snat = &SNAT{}
 			}
 
-			var source IPNet
+			var source networkControl.IPNet
 			source, err = parseIPNet(words[3], words[4])
 			if err != nil {
 				return
 			}
-			snat.Sources = append(snat.Sources, SNATSource{IPNet: source, IfName: strings.Trim(words[1], "()")})
+			snat.Sources = append(snat.Sources, networkControl.SNATSource{IPNet: source, IfName: strings.Trim(words[1], "()")})
 			snat.NATTo = natTo
 
 			if isToAppend {
 				snat.FWSMGlobalId = globalNatId
-				cfg.SNATs = append(cfg.SNATs, snat)
+				cfg.SNATs = append(cfg.SNATs, (*networkControl.SNAT)(snat))
 				snatMap[natTo.String()] = snat
 			}
 
@@ -149,7 +150,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			unusedWords := words[2:]
 
 			dnat := DNAT{}
-			protocol := PROTO_IP
+			protocol := networkControl.PROTO_IP
 			if strings.Index(unusedWords[0], ".") == -1 {
 				protocol = parseProtocol(unusedWords[0])
 				unusedWords = unusedWords[1:]
@@ -162,11 +163,11 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			if unusedWords[1] != "255.255.255.255" {
 				panic(fmt.Errorf("This case is not implemented, yet: %v", words))
 			}
-			dnat.Destinations = append(dnat.Destinations, IPPort{Protocol: &protocol, IP: dstHost, Port: dstPort})
-			dnat.NATTo = IPPort{Protocol: &protocol, IP: natToHost, Port: natToPort}
+			dnat.Destinations = append(dnat.Destinations, networkControl.IPPort{Protocol: &protocol, IP: dstHost, Port: dstPort})
+			dnat.NATTo = networkControl.IPPort{Protocol: &protocol, IP: natToHost, Port: natToPort}
 			dnat.IfName = strings.Split(strings.Trim(words[1], "()"), ",")[0]
 
-			cfg.DNATs = append(cfg.DNATs, &dnat)
+			cfg.DNATs = append(cfg.DNATs, (*networkControl.DNAT)(&dnat))
 
 		case "access-group":
 			if words[2] != "in" || words[3] != "interface" {
@@ -192,8 +193,8 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			}
 
 			cfg.Routes = append(cfg.Routes,
-				&Route{
-					Sources:     IPNets{IPNet{IP: net.ParseIP("0.0.0.0"), Mask: net.IPv4Mask(0, 0, 0, 0)}},
+				&networkControl.Route{
+					Sources:     networkControl.IPNets{networkControl.IPNet{IP: net.ParseIP("0.0.0.0"), Mask: net.IPv4Mask(0, 0, 0, 0)}},
 					Destination: dstNet,
 					Gateway:     gw,
 					Metric:      metric,
@@ -210,7 +211,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 					panic(err)
 				}
 				dhcp.IfName = words[3]
-				cfg.DHCPs = append(cfg.DHCPs, dhcp)
+				cfg.DHCPs = append(cfg.DHCPs, (networkControl.DHCP)(dhcp))
 
 			case "dns":
 				for _, ns := range words[2:] {
@@ -218,7 +219,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				}
 
 			case "domain":
-				cfg.DHCP.Domain = Domain(words[2])
+				cfg.DHCP.Domain = networkControl.Domain(words[2])
 
 			case "option":
 				dhcpOptionId, err := strconv.Atoi(words[2])
@@ -226,7 +227,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 					panic(err)
 				}
 				dhcpOptionValueType := parseDHCPOptionValueType(words[3])
-				cfg.DHCP.Options = append(cfg.DHCP.Options, DHCPOption{
+				cfg.DHCP.Options = append(cfg.DHCP.Options, networkControl.DHCPOption{
 					Id:        dhcpOptionId,
 					ValueType: dhcpOptionValueType,
 					Value:     []byte(words[4]),

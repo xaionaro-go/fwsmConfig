@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"github.com/xaionaro-go/networkControl"
 	"io"
+	"sort"
 	"net"
 )
 
 type VLAN struct {
 	net.Interface
+	VlanId        int
 	SecurityLevel int
 	IPs           IPNets
 	//IPs              IPs
@@ -21,6 +23,7 @@ type VLANs []*VLAN
 func (a VLANs) Len() int           { return len(a) }
 func (a VLANs) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a VLANs) Less(i, j int) bool { return a[i].Index < a[j].Index }
+func (a VLANs) Sort() VLANs { sort.Sort(a); return a }
 
 func (vlan VLAN) WriteTo(writer io.Writer) error {
 	fmt.Fprintf(writer, "interface Vlan%v\n", vlan.Index)
@@ -100,7 +103,7 @@ func (vlans VLANs) Add(netHost networkControl.HostI, newVLANs ...VLAN) (err erro
 		}
 
 		if netHost != nil {
-			err = netHost.AddBridgedVLAN(vlan.Interface)
+			err = netHost.AddBridgedVLAN(*networkControl.NewVLAN(vlan.Interface))
 		}
 		if err != nil {
 			break

@@ -20,10 +20,10 @@ type FwsmConfig struct {
 
 func (cfg *FwsmConfig) prepareToWrite() {
 	sort.Sort(cfg.VLANs)
-	sort.Sort(cfg.ACLs)
-	sort.Sort(cfg.SNATs)
-	sort.Sort(cfg.DNATs)
-	sort.Sort(cfg.Routes)
+	sort.Sort(networkControl.ACLs(cfg.ACLs))
+	sort.Sort(networkControl.SNATs(cfg.SNATs))
+	sort.Sort(networkControl.DNATs(cfg.DNATs))
+	sort.Sort(networkControl.Routes(cfg.Routes))
 }
 
 func (cfg FwsmConfig) CiscoString() (result string) {
