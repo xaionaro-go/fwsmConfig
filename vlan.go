@@ -26,7 +26,7 @@ func (a VLANs) Less(i, j int) bool { return a[i].Index < a[j].Index }
 func (a VLANs) Sort() VLANs { sort.Sort(a); return a }
 
 func (vlan VLAN) WriteTo(writer io.Writer) error {
-	fmt.Fprintf(writer, "interface Vlan%v\n", vlan.Index)
+	fmt.Fprintf(writer, "interface Vlan%v\n", vlan.VlanId)
 	fmt.Fprintf(writer, " nameif %v\n", vlan.Name)
 	fmt.Fprintf(writer, " security-level %v\n", vlan.SecurityLevel)
 	if len(vlan.IPs) > 0 {
