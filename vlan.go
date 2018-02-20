@@ -22,7 +22,7 @@ type VLANs []*VLAN
 
 func (a VLANs) Len() int           { return len(a) }
 func (a VLANs) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a VLANs) Less(i, j int) bool { return a[i].Index < a[j].Index }
+func (a VLANs) Less(i, j int) bool { return a[i].VlanId < a[j].VlanId }
 func (a VLANs) Sort() VLANs { sort.Sort(a); return a }
 
 func (vlan VLAN) WriteTo(writer io.Writer) error {
@@ -58,7 +58,7 @@ func (vlans VLANs) CiscoString() string {
 
 func (vlans VLANs) Find(vlanId int) (vlan VLAN, found bool) {
 	for _, vlan := range vlans {
-		if vlan.Index == vlanId {
+		if vlan.VlanId == vlanId {
 			return *vlan, true
 		}
 	}
@@ -73,12 +73,12 @@ func (vlans VLANs) Remove(netHost networkControl.HostI, vlanIds ...int) (err err
 	}
 	toRemoveIndexes := []int{}
 	for idx, vlan := range vlans {
-		if !todeleteMap[vlan.Index] {
+		if !todeleteMap[vlan.VlanId] {
 			continue
 		}
 
 		if netHost != nil {
-			err = netHost.RemoveBridgedVLAN(vlan.Index)
+			err = netHost.RemoveBridgedVLAN(vlan.VlanId)
 		}
 		if err != nil {
 			break
@@ -94,11 +94,11 @@ func (vlans VLANs) Remove(netHost networkControl.HostI, vlanIds ...int) (err err
 func (vlans VLANs) Add(netHost networkControl.HostI, newVLANs ...VLAN) (err error) {
 	alreadyExistsMap := map[int]bool{}
 	for _, vlan := range vlans {
-		alreadyExistsMap[vlan.Index] = true
+		alreadyExistsMap[vlan.VlanId] = true
 	}
 
 	for _, vlan := range newVLANs {
-		if alreadyExistsMap[vlan.Index] {
+		if alreadyExistsMap[vlan.VlanId] {
 			continue
 		}
 
