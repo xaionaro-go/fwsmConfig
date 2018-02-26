@@ -11,6 +11,8 @@ import (
 )
 
 func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
+	cfg = *NewFwsmConfig()
+
 	vlanVlanIdMap := map[int]*VLAN{}
 	vlanNameMap := map[string]*VLAN{}
 	aclMap := map[string]*ACL{}
@@ -205,33 +207,40 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 		case "dhcpd":
 			switch words[1] {
 			case "address":
-				dhcp := DHCP{}
-				err := dhcp.ParseRange(words[2])
+				subnet := DHCPSubnet{}
+				err := (*DHCPRange)(&subnet.Options.Range).Parse(words[2])
 				if err != nil {
 					panic(err)
 				}
-				dhcp.IfName = words[3]
-				cfg.DHCPs = append(cfg.DHCPs, (networkControl.DHCP)(dhcp))
-
-			case "dns":
-				for _, ns := range words[2:] {
-					cfg.DHCP.NSs = append(cfg.DHCP.NSs, parseNS(ns))
+				iface := vlanNameMap[words[3]]
+				if iface == nil {
+					panic(fmt.Errorf("Cannot find interface %v", words[3]))
+				}
+				for _, ip := range iface.IPs {
+					if !ip.Contains(subnet.Options.Range.Start) {
+						continue
+					}
+					subnet.Network = net.IPNet(ip)
+					subnet.Network.IP = subnet.Network.IP.Mask(subnet.Network.Mask)
+				}
+				err = cfg.DHCP.Subnets.ISet(subnet)
+				if err != nil {
+					panic(err)
 				}
 
+			case "dns":
+				cfg.DHCP.Options.DomainNameServers.Set(words[2:])
+
 			case "domain":
-				cfg.DHCP.Domain = networkControl.Domain(words[2])
+				cfg.DHCP.Options.DomainName = words[2]
 
 			case "option":
 				dhcpOptionId, err := strconv.Atoi(words[2])
 				if err != nil {
 					panic(err)
 				}
-				dhcpOptionValueType := parseDHCPOptionValueType(words[3])
-				cfg.DHCP.Options = append(cfg.DHCP.Options, networkControl.DHCPOption{
-					Id:        dhcpOptionId,
-					ValueType: dhcpOptionValueType,
-					Value:     []byte(words[4]),
-				})
+				value := parseDHCPOptionValue(words[3], words[4])
+				cfg.DHCP.Options.Custom[dhcpOptionId] = []byte(value)
 
 			case "enable", "lease", "ping_timeout": // is ignored, ATM
 			default:

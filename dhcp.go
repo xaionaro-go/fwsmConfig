@@ -2,69 +2,107 @@ package fwsmConfig
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"github.com/xaionaro-go/networkControl"
 	"io"
 	"net"
+	"regexp"
+	"sort"
 	"strings"
 )
 
-type DHCPCommon networkControl.DHCPCommon
-
-func (dhcp DHCPCommon) CiscoString() (result string) {
-	result = fmt.Sprintf("dhcpd dns %v\ndhcpd domain %v\n", NSs(dhcp.NSs).CiscoString(), dhcp.Domain)
-	for _, option := range dhcp.Options {
-		switch option.ValueType {
-		case networkControl.DHCPOPT_ASCII:
-			result += fmt.Sprintf("dhcpd option %v ascii %v\n", option.Id, string(option.Value))
-		default:
-			panic(fmt.Errorf("Unknown DHCP option value type: %v", option.ValueType))
-		}
-	}
-	return
-}
-
 type DHCP networkControl.DHCP
-type DHCPs networkControl.DHCPs
-type DHCPOptionValueType networkControl.DHCPOptionValueType
-type DHCPOption networkControl.DHCPOption
-type DHCPOptions networkControl.DHCPOptions
-
-func (dhcp DHCPCommon) WriteTo(writer io.Writer) error {
-	fmt.Fprintf(writer, "%v", dhcp.CiscoString())
-	return nil
+type DHCPRange networkControl.DHCPRange
+type DHCPSubnet struct {
+	networkControl.DHCPSubnet
 }
 
-func (dhcp DHCP) WriteTo(writer io.Writer) error {
-	if len(dhcp.NSs) != 0 || len(dhcp.Options) != 0 || dhcp.Domain != "" {
-		panic(fmt.Errorf("This case is not implemented, yet: %v", dhcp))
-	}
+var isAsciiString = regexp.MustCompile(`^[a-zA-Z0-9,\.?=\-_\\/<>;':"{}\[\]~!@#$%^&*()+*]+$`).MatchString
 
-	fmt.Fprintf(writer, "dhcpd address %v-%v %v\n", dhcp.RangeStart.String(), dhcp.RangeEnd.String(), dhcp.IfName)
-
-	return nil
+func NewDHCP() *DHCP {
+	return (*DHCP)(networkControl.NewDHCP())
 }
-func (dhcp *DHCP) ParseRange(ipRangeString string) error {
+
+func (r *DHCPRange) Parse(ipRangeString string) error {
 	words := strings.Split(ipRangeString, "-")
-	dhcp.RangeStart = net.ParseIP(words[0])
-	dhcp.RangeEnd = net.ParseIP(words[1])
+	r.Start = net.ParseIP(words[0])
+	r.End   = net.ParseIP(words[1])
 	return nil
 }
 
-func parseDHCPOptionValueType(valueTypeString string) networkControl.DHCPOptionValueType {
+func parseDHCPOptionValue(valueTypeString string, valueString string) []byte {
 	switch valueTypeString {
+	case "hex":
+		v, err := hex.DecodeString(valueString)
+		if err != nil {
+			panic(err)
+		}
+		return v
 	case "ascii":
-		return networkControl.DHCPOPT_ASCII
+		return []byte(valueString)
 	}
 
 	panic("Unknown DHCP option value type: <" + valueTypeString + ">")
-	return networkControl.DHCPOPT_UNKNOWN
+	return []byte{}
 }
 
-func (dhcps DHCPs) CiscoString() string {
-	var buf bytes.Buffer
-	for _, dhcp := range dhcps {
-		DHCP(dhcp).WriteTo(&buf)
+func (dhcp DHCP) CiscoWriteTo(writer io.Writer, vlans VLANs) (err error) {
+	if len(dhcp.Options.DomainNameServers) == 0 || dhcp.Options.DomainName == "" {
+		panic("This case is not implemented, yet")
 	}
+
+	_, err = fmt.Fprintf(writer, "dhcpd dns %v\ndhcpd domain %v\n", NSs(dhcp.Options.DomainNameServers.ToNetNSs()).CiscoString(), dhcp.Options.DomainName)
+	if err != nil {
+		return
+	}
+
+	var codes []int
+	for code := range dhcp.Options.Custom {
+		codes = append(codes, code)
+	}
+	sort.IntSlice(codes).Sort()
+
+	for _, code := range codes {
+		value := dhcp.Options.Custom[code]
+		if isAsciiString(string(value)) {
+			_, err = fmt.Fprintf(writer, "dhcpd option %v ascii %v\n", code, string(value))
+		} else {
+			_, err = fmt.Fprintf(writer, "dhcpd option %v hex %v\n", code, hex.EncodeToString(value))
+		}
+		if err != nil {
+			return
+		}
+	}
+
+	subnetToVlanMap := map[string]*VLAN{}
+	for _, vlan := range vlans {
+		for _, ip := range vlan.IPs {
+			subnetToVlanMap[ip.IP.Mask(ip.Mask).String()] = vlan
+		}
+	}
+
+	var subnetKeys []string
+	for k := range dhcp.Subnets {
+		subnetKeys = append(subnetKeys, k)
+	}
+	sort.StringSlice(subnetKeys).Sort()
+
+	for _, k := range subnetKeys {
+		subnet := dhcp.Subnets[k]
+		vlan := subnetToVlanMap[subnet.Network.IP.String()]
+		if vlan == nil {
+			panic(fmt.Errorf("Cannot find a VLAN for subnet %v: %v", k, subnet))
+			continue
+		}
+		fmt.Fprintf(writer, "dhcpd address %v-%v %v\n", subnet.Options.Range.Start.String(), subnet.Options.Range.End.String(), vlan.Name)
+	}
+
+	return nil
+}
+func (dhcp DHCP) CiscoString(vlans VLANs) string {
+	var buf bytes.Buffer
+	dhcp.CiscoWriteTo(&buf, vlans)
 	return buf.String()
 }
+

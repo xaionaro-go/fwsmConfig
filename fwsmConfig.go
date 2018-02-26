@@ -9,13 +9,16 @@ import (
 )
 
 type FwsmConfig struct {
-	DHCP   DHCPCommon
+	DHCP   DHCP
 	VLANs  VLANs
 	ACLs   ACLs
 	SNATs  SNATs
 	DNATs  DNATs
-	DHCPs  DHCPs
 	Routes Routes
+}
+
+func NewFwsmConfig() *FwsmConfig {
+	return &FwsmConfig{DHCP: *NewDHCP()}
 }
 
 func (cfg *FwsmConfig) prepareToWrite() {
@@ -27,13 +30,12 @@ func (cfg *FwsmConfig) prepareToWrite() {
 }
 
 func (cfg FwsmConfig) CiscoString() (result string) {
-	result += cfg.DHCP.CiscoString()
 	result += cfg.VLANs.CiscoString()
+	result += cfg.DHCP.CiscoString(cfg.VLANs)
 	result += cfg.ACLs.CiscoString()
 	result += cfg.SNATs.CiscoString()
 	result += cfg.DNATs.CiscoString()
 	result += cfg.Routes.CiscoString()
-	result += cfg.DHCPs.CiscoString()
 	return
 }
 

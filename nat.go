@@ -19,7 +19,7 @@ type DNAT networkControl.DNAT
 type SNATs networkControl.SNATs
 type DNATs networkControl.DNATs
 
-func (snat SNAT) WriteTo(writer io.Writer) error {
+func (snat SNAT) CiscoWriteTo(writer io.Writer) error {
 	fmt.Fprintf(writer, "global ("+EXTERNAL_NET+") %v %v\n", snat.FWSMGlobalId, snat.NATTo.String())
 	for _, source := range snat.Sources {
 		fmt.Fprintf(writer, "nat (%v) %v %v %v\n", source.IfName, snat.FWSMGlobalId, source.IP.String(), net.IP(source.Mask).String())
@@ -30,12 +30,12 @@ func (snat SNAT) WriteTo(writer io.Writer) error {
 func (snats SNATs) CiscoString() string {
 	var buf bytes.Buffer
 	for _, snat := range snats {
-		SNAT(*snat).WriteTo(&buf)
+		SNAT(*snat).CiscoWriteTo(&buf)
 	}
 	return buf.String()
 }
 
-func (dnat DNAT) WriteTo(writer io.Writer) error {
+func (dnat DNAT) CiscoWriteTo(writer io.Writer) error {
 	for _, dst := range dnat.Destinations {
 		protocolPrefix := ""
 		if dnat.NATTo.Protocol != nil {
@@ -55,7 +55,7 @@ func (dnat DNAT) WriteTo(writer io.Writer) error {
 func (dnats DNATs) CiscoString() string {
 	var buf bytes.Buffer
 	for _, dnat := range dnats {
-		DNAT(*dnat).WriteTo(&buf)
+		DNAT(*dnat).CiscoWriteTo(&buf)
 	}
 	return buf.String()
 }

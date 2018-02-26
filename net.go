@@ -65,9 +65,6 @@ func parseIPNetUnmasked(ipStr string, maskStr string) (networkControl.IPNet, err
 func parseIPNet(ipStr string, maskStr string) (networkControl.IPNet, error) {
 	return networkControl.IPNetFromStrings(ipStr, maskStr)
 }
-func parseNS(nsStr string) net.NS {
-	return networkControl.NSFromString(nsStr)
-}
 func parsePort(portStr string) uint16 {
 	return networkControl.PortFromString(portStr)
 }
