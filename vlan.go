@@ -9,14 +9,16 @@ import (
 	"net"
 )
 
-type VLAN struct {
+/*type VLAN struct {
 	net.Interface
 	VlanId        int
 	SecurityLevel int
 	IPs           IPNets
 	//IPs              IPs
 	//AttachedNetworks IPNets
-}
+}*/
+
+type VLAN networkControl.VLAN
 
 type VLANs []*VLAN
 
@@ -54,6 +56,14 @@ func (vlans VLANs) CiscoString() string {
 		vlan.WriteTo(&buf)
 	}
 	return buf.String()
+}
+
+func (vlans VLANs) ToNetworkControlVLANs() (result networkControl.VLANs) {
+	result = networkControl.VLANs{}
+	for _, vlan := range vlans {
+		result[vlan.VlanId] = (*networkControl.VLAN)(vlan)
+	}
+	return
 }
 
 func (vlans VLANs) Find(vlanId int) (vlan VLAN, found bool) {

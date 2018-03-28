@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/xaionaro-go/networkControl"
 	"io"
+	"os"
 	"sort"
 )
 
@@ -53,14 +54,42 @@ func (cfg FwsmConfig) WriteJsonTo(writer io.Writer) (err error) {
 	return jsonEncoder.Encode(cfg)
 }
 
+
+func (cfg FwsmConfig) ToNetworkControlState() networkControl.State {
+	return networkControl.State{
+		DHCP:         networkControl.DHCP(cfg.DHCP),
+		BridgedVLANs: cfg.VLANs.ToNetworkControlVLANs(),
+		ACLs:         networkControl.ACLs(cfg.ACLs),
+		SNATs:        networkControl.SNATs(cfg.SNATs),
+		DNATs:        networkControl.DNATs(cfg.DNATs),
+		Routes:       networkControl.Routes(cfg.Routes),
+	}
+}
+
 func (cfg FwsmConfig) Apply(netHost networkControl.HostI) error {
-	return errNotImplemented
+	err := netHost.SetNewState(cfg.ToNetworkControlState())
+	if err != nil {
+		return err
+	}
+	return netHost.Apply()
 }
 
 func (cfg FwsmConfig) Save(netHost networkControl.HostI, cfgPath string) error {
-	return errNotImplemented
+	f, err := os.Create(cfgPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	err = cfg.WriteTo(f)
+	if err != nil {
+		return err
+	}
+
+	return netHost.Save()
 }
 
 func (cfg FwsmConfig) Revert(netHost networkControl.HostI) error {
+	panic(errNotImplemented)
 	return errNotImplemented
 }

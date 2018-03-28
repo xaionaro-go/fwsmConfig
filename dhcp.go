@@ -7,7 +7,6 @@ import (
 	"github.com/xaionaro-go/networkControl"
 	"io"
 	"net"
-	"regexp"
 	"sort"
 	"strings"
 )
@@ -18,7 +17,7 @@ type DHCPSubnet struct {
 	networkControl.DHCPSubnet
 }
 
-var isAsciiString = regexp.MustCompile(`^[a-zA-Z0-9,\.?=\-_\\/<>;':"{}\[\]~!@#$%^&*()+*]+$`).MatchString
+var isAsciiString = networkControl.IsDHCPAsciiString
 
 func NewDHCP() *DHCP {
 	return (*DHCP)(networkControl.NewDHCP())
@@ -31,20 +30,20 @@ func (r *DHCPRange) Parse(ipRangeString string) error {
 	return nil
 }
 
-func parseDHCPOptionValue(valueTypeString string, valueString string) []byte {
+func parseDHCPOptionValue(valueTypeString string, valueString string) ([]byte, networkControl.DHCPValueType) {
 	switch valueTypeString {
 	case "hex":
 		v, err := hex.DecodeString(valueString)
 		if err != nil {
 			panic(err)
 		}
-		return v
+		return v, networkControl.DHCPValueType_BYTEARRAY
 	case "ascii":
-		return []byte(valueString)
+		return []byte(valueString), networkControl.DHCPValueType_ASCIISTRING
 	}
 
 	panic("Unknown DHCP option value type: <" + valueTypeString + ">")
-	return []byte{}
+	return []byte{}, networkControl.DHCPValueType_UNKNOWN
 }
 
 func (dhcp DHCP) CiscoWriteTo(writer io.Writer, vlans VLANs) (err error) {

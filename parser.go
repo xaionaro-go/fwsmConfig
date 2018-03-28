@@ -73,6 +73,11 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				}
 			}
 
+			if vlan.Name == "" {
+				warning("Empty interface name of vlan: %v", vlan)
+				continue
+			}
+
 			cfg.VLANs = append(cfg.VLANs, &vlan)
 			vlanVlanIdMap[vlan.VlanId] = &vlan
 			vlanNameMap[vlan.Name] = &vlan
@@ -239,8 +244,10 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				if err != nil {
 					panic(err)
 				}
-				value := parseDHCPOptionValue(words[3], words[4])
+				value, valueType := parseDHCPOptionValue(words[3], words[4])
 				cfg.DHCP.Options.Custom[dhcpOptionId] = []byte(value)
+
+				cfg.DHCP.UserDefinedOptionFields.Set(fmt.Sprintf("option%v", dhcpOptionId), dhcpOptionId, valueType)
 
 			case "enable", "lease", "ping_timeout": // is ignored, ATM
 			default:
