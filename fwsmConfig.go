@@ -86,6 +86,10 @@ func (cfg FwsmConfig) Save(netHost networkControl.HostI, cfgPath string) error {
 		return err
 	}
 
+	if netHost == nil {
+		return nil
+	}
+
 	return netHost.Save()
 }
 

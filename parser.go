@@ -20,8 +20,10 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 
 	globalNatMap := map[int]net.IP{}
 
+	lineNum := 0
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
+		lineNum++
 		line := scanner.Text()
 		words := strings.Split(strings.Trim(line, " "), " ")
 		if len(words) == 0 {
@@ -31,7 +33,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 		switch words[0] {
 		case "interface":
 			if len(words[1]) < 5 {
-				panic(fmt.Errorf("invalid interface name: %v; should be vlanX[X[X[X]]]", words[1]))
+				panic(fmt.Errorf("line#%v: invalid interface name: %v; should be vlanX[X[X[X]]]", lineNum, words[1]))
 			}
 			vlan := VLAN{Interface: net.Interface{MTU: 1500, Flags: net.FlagUp | net.FlagMulticast}}
 			vlan.VlanId, err = strconv.Atoi(words[1][4:]) // "Vlan10" -> vlan.VlanId: 10
@@ -39,6 +41,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				return
 			}
 			for scanner.Scan() {
+				lineNum++
 				subLine := scanner.Text()
 				if strings.Trim(subLine, " \t\r\n") == "!" {
 					break
@@ -60,13 +63,13 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 						ipnet, err = parseIPNetUnmasked(subWords[2], subWords[3])
 						vlan.IPs = append(vlan.IPs, ipnet)
 					default:
-						warning("Cannot parse line: %v", subLine)
+						warning("line#%v: Cannot parse line: %v", lineNum, subLine)
 					}
 				case "shutdown":
 					vlan.Flags &= 0 ^ net.FlagUp
 				case "no":
 				default:
-					warning("Cannot parse line: %v", subLine)
+					warning("line#%v: Cannot parse line: %v", lineNum, subLine)
 				}
 				if err != nil {
 					return
@@ -74,7 +77,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			}
 
 			if vlan.Name == "" {
-				warning("Empty interface name of vlan: %v", vlan)
+				warning("line#%v: Empty interface name of vlan: %v", lineNum, vlan)
 				continue
 			}
 
@@ -87,7 +90,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 		case "name-server":
 			cfg.DHCP.NSs = append(cfg.DHCP.NSs, parseNS(words[2]))
 		default:
-			warning("Cannot parse line: %v", line)
+			warning("line#%v: Cannot parse line: %v", lineNum, line)
 		}*/
 		case "access-list":
 			aclName := words[1]
@@ -165,10 +168,10 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 			dstHost, dstPort, unusedWords := parseHostPort(unusedWords)
 			natToHost, natToPort, unusedWords := parseHostPort(unusedWords)
 			if unusedWords[0] != "netmask" {
-				panic(fmt.Errorf("This shouldn't happened: %v", words))
+				panic(fmt.Errorf("line#%v: This shouldn't happened: %v", lineNum, words))
 			}
 			if unusedWords[1] != "255.255.255.255" {
-				panic(fmt.Errorf("This case is not implemented, yet: %v", words))
+				panic(fmt.Errorf("line#%v: This case is not implemented, yet: %v", lineNum, words))
 			}
 			dnat.Destinations = append(dnat.Destinations, networkControl.IPPort{Protocol: &protocol, IP: dstHost, Port: dstPort})
 			dnat.NATTo = networkControl.IPPort{Protocol: &protocol, IP: natToHost, Port: natToPort}
@@ -178,7 +181,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 
 		case "access-group":
 			if words[2] != "in" || words[3] != "interface" {
-				panic("This case is not implemented")
+				panic(fmt.Errorf("line#%v: This case is not implemented", lineNum))
 			}
 
 			aclName := words[1]
@@ -219,7 +222,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 				}
 				iface := vlanNameMap[words[3]]
 				if iface == nil {
-					panic(fmt.Errorf("Cannot find interface %v", words[3]))
+					return cfg, fmt.Errorf("line#%v: Cannot find interface %v", lineNum, words[3])
 				}
 				for _, ip := range iface.IPs {
 					if !ip.Contains(subnet.Options.Range.Start) {
@@ -251,11 +254,11 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 
 			case "enable", "lease", "ping_timeout": // is ignored, ATM
 			default:
-				panic(fmt.Errorf("Unknown DHCP command: %v", words))
+				panic(fmt.Errorf("line#%v: Unknown DHCP command: %v", lineNum, words))
 			}
 
 		default:
-			warning("Cannot parse line: %v", line)
+			warning("line#%v: Cannot parse line: %v", lineNum, line)
 		}
 		if err != nil {
 			return
