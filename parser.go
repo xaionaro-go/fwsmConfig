@@ -25,7 +25,7 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 	for scanner.Scan() {
 		lineNum++
 		line := scanner.Text()
-		words := strings.Split(strings.Trim(line, " "), " ")
+		words := strings.Fields(strings.Trim(line, " "))
 		if len(words) == 0 {
 			continue
 		}
