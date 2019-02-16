@@ -10,6 +10,8 @@ import (
 )
 
 type FwsmConfig struct {
+	PermitInterInterface bool
+	PermitIntraInterface bool
 	DHCP   DHCP
 	VLANs  VLANs
 	ACLs   ACLs
@@ -31,6 +33,12 @@ func (cfg *FwsmConfig) prepareToWrite() {
 }
 
 func (cfg FwsmConfig) CiscoString() (result string) {
+	if cfg.PermitInterInterface {
+		result += fmt.Sprintf(`same-security-traffic permit inter-interface`)
+	}
+	if cfg.PermitIntraInterface {
+		result += fmt.Sprintf(`same-security-traffic permit intra-interface`)
+	}
 	result += cfg.VLANs.CiscoString()
 	result += cfg.DHCP.CiscoString(cfg.VLANs)
 	result += cfg.ACLs.CiscoString()
@@ -57,12 +65,14 @@ func (cfg FwsmConfig) WriteJsonTo(writer io.Writer) (err error) {
 
 func (cfg FwsmConfig) ToNetworkControlState() networkControl.State {
 	return networkControl.State{
-		DHCP:         networkControl.DHCP(cfg.DHCP),
-		BridgedVLANs: cfg.VLANs.ToNetworkControlVLANs(),
-		ACLs:         networkControl.ACLs(cfg.ACLs),
-		SNATs:        networkControl.SNATs(cfg.SNATs),
-		DNATs:        networkControl.DNATs(cfg.DNATs),
-		Routes:       networkControl.Routes(cfg.Routes),
+		PermitInterInterface: cfg.PermitInterInterface,
+		PermitIntraInterface: cfg.PermitIntraInterface,
+		DHCP:                 networkControl.DHCP(cfg.DHCP),
+		BridgedVLANs:         cfg.VLANs.ToNetworkControlVLANs(),
+		ACLs:                 networkControl.ACLs(cfg.ACLs),
+		SNATs:                networkControl.SNATs(cfg.SNATs),
+		DNATs:                networkControl.DNATs(cfg.DNATs),
+		Routes:               networkControl.Routes(cfg.Routes),
 	}
 }
 

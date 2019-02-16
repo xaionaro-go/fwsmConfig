@@ -31,6 +31,21 @@ func Parse(reader io.Reader) (cfg FwsmConfig, err error) {
 		}
 
 		switch words[0] {
+		case "same-security-traffic":
+			if len(words) < 3 {
+				panic(fmt.Errorf(`line#%v: unexpected end. Expected "same-security-traffic permit {inter-interface|intra-interface}".`, lineNum))
+			}
+			if words[1] != `permit` {
+				panic(fmt.Errorf(`line#%v: unexpected keyword "%v". Expected "permit".`, lineNum, words[1]))
+			}
+			switch words[2] {
+			case `inter-interface`:
+				cfg.PermitInterInterface = true
+			case `intra-interface`:
+				cfg.PermitIntraInterface = true
+			default:
+				panic(fmt.Errorf(`line#%v: unexpected keyword "%v". Expected "inter-interface" or "intra-interface".`, lineNum, words[2]))
+			}
 		case "interface":
 			if len(words[1]) < 5 {
 				panic(fmt.Errorf("line#%v: invalid interface name: %v; should be vlanX[X[X[X]]]", lineNum, words[1]))
