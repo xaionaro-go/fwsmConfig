@@ -34,10 +34,10 @@ func (cfg *FwsmConfig) prepareToWrite() {
 
 func (cfg FwsmConfig) CiscoString() (result string) {
 	if cfg.PermitInterInterface {
-		result += fmt.Sprintf(`same-security-traffic permit inter-interface`)
+		result += fmt.Sprintf("same-security-traffic permit inter-interface\n")
 	}
 	if cfg.PermitIntraInterface {
-		result += fmt.Sprintf(`same-security-traffic permit intra-interface`)
+		result += fmt.Sprintf("same-security-traffic permit intra-interface\n")
 	}
 	result += cfg.VLANs.CiscoString()
 	result += cfg.DHCP.CiscoString(cfg.VLANs)
